@@ -182,3 +182,54 @@ export type DocumentRow = typeof documents.$inferSelect;
 export type ChunkRow = typeof chunks.$inferSelect;
 export type ChatRow = typeof chats.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
+
+export type ChangeType = "modified" | "added" | "removed";
+export type Significance = "high" | "medium" | "low" | "cosmetic";
+
+/** One clause-level difference between two versions of a document. */
+export type ClauseChange = {
+  id: number;
+  type: ChangeType;
+  significance: Significance;
+  summary: string;
+  /** Section heading the clause sits under (from the newer version when available). */
+  heading: string | null;
+  oldClause: string | null;
+  newClause: string | null;
+  oldText: string | null;
+  newText: string | null;
+  oldPages: [number, number] | null;
+  newPages: [number, number] | null;
+  /** Amounts, dates, periods and percentages that differ, found by code rather than the AI. */
+  numberChanges: { removed: string[]; added: string[] } | null;
+  /** False when the AI assessment failed; the change is still shown, flagged for manual review. */
+  assessed: boolean;
+  /** Position in the documents, for "document order" sorting. */
+  order: number;
+};
+
+export type ComparisonResult = {
+  overview: string;
+  changes: ClauseChange[];
+  unchanged: number;
+  /** Clause pairs whose significance the AI could not assess (shown as such, never hidden). */
+  unassessed: number;
+};
+
+export const comparisons = pgTable("comparisons", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  oldDocumentId: uuid("old_document_id")
+    .notNull()
+    .references(() => documents.id, { onDelete: "cascade" }),
+  newDocumentId: uuid("new_document_id")
+    .notNull()
+    .references(() => documents.id, { onDelete: "cascade" }),
+  status: text("status").$type<DocumentStatus>().notNull().default("processing"),
+  step: text("step"),
+  error: text("error"),
+  result: jsonb("result").$type<ComparisonResult>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type ComparisonRow = typeof comparisons.$inferSelect;

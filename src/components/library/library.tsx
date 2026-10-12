@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
-import { AlertCircle, Loader2, MessagesSquare, X } from "lucide-react";
+import { AlertCircle, GitCompareArrows, Loader2, MessagesSquare, X } from "lucide-react";
 import {
   MAX_CHAT_DOCUMENTS,
   MAX_UPLOAD_BYTES,
@@ -37,6 +37,23 @@ export function Library() {
   function toggle(id: string) {
     setStartError(null);
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  }
+
+  async function startComparison() {
+    setStarting(true);
+    setStartError(null);
+    // Selection order decides which is the original: the first document ticked.
+    const res = await fetch("/api/comparisons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ oldDocumentId: chosen[0], newDocumentId: chosen[1] }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) router.push(`/compare/${body.id}`);
+    else {
+      setStarting(false);
+      setStartError(body.error ?? "Could not start the comparison.");
+    }
   }
 
   async function startChat() {
@@ -179,7 +196,8 @@ export function Library() {
             <h2 className="text-sm font-medium">Documents</h2>
             {docs && docs.some((d) => d.status === "ready") && (
               <p className="mt-0.5 text-xs text-muted">
-                Open one to chat with it, or tick up to {MAX_CHAT_DOCUMENTS} to ask across them.
+                Open one to chat with it, tick up to {MAX_CHAT_DOCUMENTS} to ask across them, or tick two to compare
+                versions (the first ticked is the original).
               </p>
             )}
           </div>
@@ -231,7 +249,18 @@ export function Library() {
           ) : (
             startError && <span className="text-xs text-danger">{startError}</span>
           )}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {chosen.length === 2 && (
+              <button
+                onClick={startComparison}
+                disabled={starting}
+                title={`Original: ${docs?.find((d) => d.id === chosen[0])?.name}. Revised: ${docs?.find((d) => d.id === chosen[1])?.name}.`}
+                className="inline-flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-sm font-medium hover:bg-surface-2 disabled:opacity-50"
+              >
+                <GitCompareArrows className="size-4" />
+                Compare versions
+              </button>
+            )}
             <button onClick={() => setSelected([])} className="rounded-md px-3 py-1.5 text-sm text-muted hover:bg-surface-2">
               Clear
             </button>
