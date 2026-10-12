@@ -1,15 +1,23 @@
 import { connection } from "next/server";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { chunks } from "@/lib/db/schema";
 
-export async function GET(_req: Request, ctx: RouteContext<"/api/documents/[id]/chunks">) {
+/** All chunks of a document, or only `?indexes=3,87` (used to highlight citations). */
+export async function GET(request: Request, ctx: RouteContext<"/api/documents/[id]/chunks">) {
   await connection();
   const { id } = await ctx.params;
   if (!z.string().uuid().safeParse(id).success) {
     return Response.json({ error: "Document not found." }, { status: 404 });
   }
+  const param = new URL(request.url).searchParams.get("indexes");
+  const indexes = param
+    ?.split(",")
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n >= 0)
+    .slice(0, 50);
+
   const rows = await db
     .select({
       index: chunks.index,
@@ -22,7 +30,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/documents/[id]/
       boxes: chunks.boxes,
     })
     .from(chunks)
-    .where(eq(chunks.documentId, id))
+    .where(and(eq(chunks.documentId, id), indexes ? inArray(chunks.index, indexes) : undefined))
     .orderBy(asc(chunks.index));
   return Response.json(rows);
 }

@@ -1,0 +1,67 @@
+/* Citation highlights in the document viewer */
+@keyframes highlight-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  30% {
+    box-shadow: 0 0 0 4px rgb(255 196 0 / 0.55);
+  }
+}
+.pdf-highlight {
+  background: rgb(255 214 0 / 0.38);
+  mix-blend-mode: multiply;
+  animation: highlight-pulse 1.4s ease-out 2;
+}
+.docx-highlight {
+  background: rgb(255 214 0 / 0.38);
+  border-radius: 2px;
+  animation: highlight-pulse 1.4s ease-out 2;
+}
+
+/* Word documents rendered as HTML */
+.docx-page {
+  line-height: 1.6;
+  font-family: Georgia, "Times New Roman", serif;
+}
+.docx-page > * + * {
+  margin-top: 0.7em;
+}
+.docx-page h1,
+.docx-page h2,
+.docx-page h3,
+.docx-page h4 {
+  font-weight: 700;
+  margin-top: 1.3em;
+}
+.docx-page h1 {
+  font-size: 1.5em;
+  text-align: center;
+}
+.docx-page h2 {
+  font-size: 1.15em;
+}
+.docx-page ul,
+.docx-page ol {
+  padding-left: 1.6em;
+}
+.docx-page ul {
+  list-style: disc;
+}
+.docx-page ol {
+  list-style: decimal;
+}
+.docx-page table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.docx-page td,
+.docx-page th {
+  border: 1px solid #ccc;
+  padding: 0.3em 0.5em;
+  vertical-align: top;
+}
+.docx-page a {
+  color: #2f4cdd;
+  text-decoration: underline;
+}

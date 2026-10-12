@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, Loader2, MessageSquare, Plus } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, Loader2, MessageSquare, Plus } from "lucide-react";
 import type { ChatData, ChatSummary, SelectedCitation, UiMessage } from "@/lib/chat/client-types";
 import { Composer } from "./composer";
 import { AssistantMessage, UserMessage } from "./message";
-import { SourcePanel } from "./source-panel";
+import { DocumentPanel } from "@/components/viewer/document-panel";
 import { useChatStream } from "./use-chat-stream";
 
 const SUGGESTIONS = [
@@ -23,6 +23,12 @@ export function Workspace() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [selected, setSelected] = useState<SelectedCitation | null>(null);
+  // Small screens show the document as an overlay; large screens always show it beside the chat.
+  const [panelOpen, setPanelOpen] = useState(false);
+  const selectCitation = useCallback((s: SelectedCitation) => {
+    setSelected(s);
+    setPanelOpen(true);
+  }, []);
   const scroller = useRef<HTMLDivElement>(null);
   const { send, stop, streaming } = useChatStream(id, setMessages);
 
@@ -92,6 +98,12 @@ export function Workspace() {
             {docNames}
           </p>
         </div>
+        <button
+          onClick={() => setPanelOpen(true)}
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-muted hover:bg-surface-2 hover:text-fg lg:hidden"
+        >
+          <FileText className="size-4" /> Document
+        </button>
         <ChatMenu chatId={id} documentId={data.documents[0]?.id} documentIds={data.documents.map((d) => d.id)} />
       </header>
 
@@ -111,7 +123,7 @@ export function Workspace() {
                       message={m}
                       multiDoc={multiDoc}
                       selectedId={selected?.citation.id ?? null}
-                      onSelect={setSelected}
+                      onSelect={selectCitation}
                       onRetry={
                         i === messages.length - 1 && !streaming && messages[i - 1]?.role === "user"
                           ? () => ask(messages[i - 1].content)
@@ -138,10 +150,10 @@ export function Workspace() {
 
         <aside
           className={`${
-            selected ? "fixed inset-0 z-20 flex flex-col" : "hidden"
-          } bg-surface lg:static lg:flex lg:w-[44%] lg:max-w-2xl lg:flex-col lg:border-l lg:border-line`}
+            panelOpen ? "fixed inset-0 z-20 flex flex-col" : "hidden"
+          } bg-surface lg:static lg:z-auto lg:flex lg:w-[48%] lg:max-w-3xl lg:flex-col lg:border-l lg:border-line`}
         >
-          <SourcePanel selected={selected} onClose={() => setSelected(null)} />
+          <DocumentPanel documents={data.documents} selected={selected} onClose={() => setPanelOpen(false)} />
         </aside>
       </div>
     </div>
