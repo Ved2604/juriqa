@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { chatDocuments, chats, documents } from "@/lib/db/schema";
 import { NEW_CHAT_TITLE } from "@/lib/chat/respond";
+import { MAX_CHAT_DOCUMENTS } from "@/lib/documents/constants";
 
 /** Chats that include the given document, newest first. */
 export async function GET(request: Request) {
@@ -21,11 +22,13 @@ export async function GET(request: Request) {
   return Response.json(rows);
 }
 
-const createSchema = z.object({ documentIds: z.array(z.string().uuid()).min(1).max(10) });
+const createSchema = z.object({ documentIds: z.array(z.string().uuid()).min(1).max(MAX_CHAT_DOCUMENTS) });
 
 export async function POST(request: Request) {
   const parsed = createSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return Response.json({ error: "Choose at least one document." }, { status: 400 });
+  if (!parsed.success) {
+    return Response.json({ error: `Choose between 1 and ${MAX_CHAT_DOCUMENTS} documents.` }, { status: 400 });
+  }
   const ids = [...new Set(parsed.data.documentIds)];
 
   const ready = await db

@@ -171,6 +171,7 @@ export function computeCoverage(docs: ChatDoc[], state: AgentState): Coverage {
         name: d.name,
         totalChunks: d.chunkCount,
         readChunks: read.length,
+        finding: state.findings.get(d.label) ?? null,
         full: read.length >= d.chunkCount,
         fullScan: state.scanned.has(d.id),
         pagesRead: [...pages].sort((a, b) => a - b),

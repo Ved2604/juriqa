@@ -34,8 +34,23 @@ How to answer:
 - Do not use outside legal knowledge or assumptions. If the passages you found do not answer the question, say so plainly. Never fill gaps with guesses.
 - Mention conditions, exceptions and qualifications ("subject to clause 12", "except for gross negligence") when the passages contain them.
 - Only say something is absent from the document if you have read the entire document. Otherwise say you could not find it in the passages you searched.
-- End every answer with one final line, exactly: FINDING: found, FINDING: not_found or FINDING: partial
-  (found = the passages answer the question; not_found = you could not find the answer; partial = only part of the question is answered).`;
+${docs.length > 1 ? comparisonRules(docs) : ""}
+${
+  docs.length > 1
+    ? `- End every answer with one final line reporting each document, exactly like: FINDING: ${docs.map((d, i) => `${d.label}=${i === 0 ? "found" : "not_found"}`).join(", ")}
+  (found = that document answers the question; not_found = you could not find it in that document; partial = it answers only part).`
+    : `- End every answer with one final line, exactly: FINDING: found, FINDING: not_found or FINDING: partial
+  (found = the passages answer the question; not_found = you could not find the answer; partial = only part of the question is answered).`
+}`;
+}
+
+function comparisonRules(docs: ChatDoc[]): string {
+  return `
+Comparing documents (this chat has ${docs.length}):
+- Compare the documents rather than answering for each one in turn. Lead with what is the same and what differs.
+- When comparing specific terms (amounts, periods, parties, obligations), use a markdown table with one row per term and one column per document, and cite inside each cell.
+- If a document does not address the point, say so explicitly for that document. Only call it absent if that document was read in full.
+- Refer to documents by their names, not their labels. Every citation must come from the document it describes.`;
 }
 
 export const FINAL_ROUND_NOTE =

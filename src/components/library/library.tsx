@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
-import { AlertCircle, X } from "lucide-react";
+import { AlertCircle, Loader2, MessagesSquare, X } from "lucide-react";
 import {
+  MAX_CHAT_DOCUMENTS,
   MAX_UPLOAD_BYTES,
   MIME_BY_KIND,
   UNSUPPORTED_TYPE_MESSAGE,
@@ -23,6 +25,35 @@ export function Library() {
   const [loadError, setLoadError] = useState(false);
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [rejections, setRejections] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const router = useRouter();
+
+  // Only ready documents that still exist can stay selected.
+  const selectable = new Set(docs?.filter((d) => d.status === "ready").map((d) => d.id));
+  const chosen = selected.filter((id) => selectable.has(id));
+
+  function toggle(id: string) {
+    setStartError(null);
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  }
+
+  async function startChat() {
+    setStarting(true);
+    setStartError(null);
+    const res = await fetch("/api/chats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentIds: chosen }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) router.push(`/chat/${body.id}`);
+    else {
+      setStarting(false);
+      setStartError(body.error ?? "Could not start the chat.");
+    }
+  }
 
   const refresh = useCallback(async () => {
     try {
@@ -144,7 +175,14 @@ export function Library() {
 
       <section className="mt-10">
         <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="text-sm font-medium">Documents</h2>
+          <div>
+            <h2 className="text-sm font-medium">Documents</h2>
+            {docs && docs.some((d) => d.status === "ready") && (
+              <p className="mt-0.5 text-xs text-muted">
+                Open one to chat with it, or tick up to {MAX_CHAT_DOCUMENTS} to ask across them.
+              </p>
+            )}
+          </div>
           {docs && docs.length > 0 && (
             <span className="text-xs text-muted">
               {docs.length} {docs.length === 1 ? "document" : "documents"}
@@ -171,11 +209,43 @@ export function Library() {
               <UploadingRow key={u.key} upload={u} />
             ))}
             {docs.map((d) => (
-              <DocumentRow key={d.id} doc={d} onDelete={() => handleDelete(d.id)} />
+              <DocumentRow
+                key={d.id}
+                doc={d}
+                selected={chosen.includes(d.id)}
+                onToggle={() => toggle(d.id)}
+                onDelete={() => handleDelete(d.id)}
+              />
             ))}
           </ul>
         )}
       </section>
+
+      {chosen.length > 0 && (
+        <div className="sticky bottom-4 mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-lg">
+          <span className="text-sm">
+            <span className="font-medium">{chosen.length}</span> selected
+          </span>
+          {chosen.length > MAX_CHAT_DOCUMENTS ? (
+            <span className="text-xs text-danger">Select at most {MAX_CHAT_DOCUMENTS} documents.</span>
+          ) : (
+            startError && <span className="text-xs text-danger">{startError}</span>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={() => setSelected([])} className="rounded-md px-3 py-1.5 text-sm text-muted hover:bg-surface-2">
+              Clear
+            </button>
+            <button
+              onClick={startChat}
+              disabled={starting || chosen.length > MAX_CHAT_DOCUMENTS}
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {starting ? <Loader2 className="size-4 animate-spin" /> : <MessagesSquare className="size-4" />}
+              {chosen.length === 1 ? "Chat with this document" : `Ask across ${chosen.length} documents`}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

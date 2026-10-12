@@ -80,6 +80,8 @@ function singleSummary(d: DocCoverage, level: Level): string {
 
 function multiSummary(docs: DocCoverage[], levels: Level[]): string {
   const full = levels.filter((l) => l === "full").length;
-  if (full === docs.length) return `All ${docs.length} documents fully reviewed`;
-  return `${full} of ${docs.length} documents fully reviewed`;
+  if (full === docs.length) return docs.length === 2 ? "Both documents fully reviewed" : `All ${docs.length} documents fully reviewed`;
+  if (levels.includes("incomplete")) return `Incomplete: parts of ${docs.length - full === 1 ? "one document" : "some documents"} not read`;
+  if (full === 0) return `Targeted search across ${docs.length} documents`;
+  return `${full} of ${docs.length} documents fully reviewed, others searched`;
 }

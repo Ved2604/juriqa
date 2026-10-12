@@ -195,22 +195,33 @@ async function search(query: string, scope: ChatDoc[]): Promise<ToolResult> {
   // which also catches numbers and amounts the stemmer splits up ("AED 100,000").
   const tsq = tsQuery ? sql`to_tsquery('english', ${tsQuery})` : sql`NULL::tsquery`;
   const score = sql<number>`coalesce(ts_rank_cd(${chunks.search}, ${tsq}, 32), 0) + (case when ${chunks.text} ilike ${phrase} then 1 else 0 end)`;
-  const rows = await db
-    .select(chunkColumns)
-    .from(chunks)
-    .where(
-      and(
-        inArray(chunks.documentId, scope.map((d) => d.id)),
-        or(sql`${chunks.search} @@ ${tsq}`, sql`${chunks.text} ilike ${phrase}`),
-      ),
-    )
-    .orderBy(desc(score), asc(chunks.index))
-    .limit(SEARCH_LIMIT);
+  const runQuery = (docIds: string[], limit: number) =>
+    db
+      .select(chunkColumns)
+      .from(chunks)
+      .where(
+        and(
+          inArray(chunks.documentId, docIds),
+          or(sql`${chunks.search} @@ ${tsq}`, sql`${chunks.text} ilike ${phrase}`),
+        ),
+      )
+      .orderBy(desc(score), asc(chunks.index))
+      .limit(limit);
+
+  // Across several documents, take the best matches from each, so one contract can't crowd out the rest.
+  const rows =
+    scope.length > 1
+      ? (await Promise.all(scope.map((d) => runQuery([d.id], Math.max(3, Math.ceil(SEARCH_LIMIT / scope.length) + 1))))).flat()
+      : await runQuery([scope[0].id], SEARCH_LIMIT);
 
   const found = toRetrieved(rows, scope);
+  const missing = scope.length > 1 ? scope.filter((d) => !found.some((c) => c.doc.id === d.id)) : [];
   return {
     response: found.length
-      ? { results: formatChunks(found, scope.length > 1) }
+      ? {
+          results: formatChunks(found, scope.length > 1),
+          ...(missing.length ? { note: `No matches in ${missing.map((d) => d.label).join(", ")}. Try other wording for those documents.` } : {}),
+        }
       : { results: [], note: "No passages matched. Try synonyms, related legal terms, or list_clauses." },
     chunks: found,
     label,

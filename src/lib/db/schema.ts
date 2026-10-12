@@ -131,6 +131,8 @@ export type DocCoverage = {
   name: string;
   totalChunks: number;
   readChunks: number;
+  /** Whether this document answered the question, as reported by the AI and backed by coverage. */
+  finding?: Finding | null;
   /** Every chunk was read (full scan succeeded or the searches touched everything). */
   full: boolean;
   fullScan: boolean;

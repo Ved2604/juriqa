@@ -13,6 +13,8 @@ import { type RetrievedChunk, formatChunks, runTool, toolDeclarations } from "./
 export type AgentState = {
   text: string;
   finding: Finding | null;
+  /** Per-document finding, by label (D1, D2...). */
+  findings: Map<string, Finding>;
   trace: TraceStep[];
   /** Chunks whose text the model has seen; only these may be cited. */
   retrieved: Map<string, RetrievedChunk>;
@@ -27,6 +29,7 @@ export type AgentState = {
 export const newAgentState = (): AgentState => ({
   text: "",
   finding: null,
+  findings: new Map(),
   trace: [],
   retrieved: new Map(),
   read: new Map(),
@@ -144,11 +147,14 @@ ${prescanNote(JSON.stringify(scanResponse(scan, docs)))}` }],
     }
 
     if (out.text.trim()) {
-      state.finding = parseFinding(out.tag) ?? (citedIds(state.text).length ? "found" : "not_found");
+      state.findings = parseFindings(out.tag, docs, state.text);
+      state.finding = overallFinding([...state.findings.values()]);
 
-      // Safety net: never let "not found" stand unless every passage was read.
-      const unread = docs.filter((d) => !state.scanned.has(d.id) && !fullyRead(d, state));
-      if (state.finding !== "found" && !safetyNetUsed && unread.length) {
+      // Safety net: never let "not found" stand for a document unless every passage of it was read.
+      const unread = docs.filter(
+        (d) => state.findings.get(d.label) !== "found" && !state.scanned.has(d.id) && !fullyRead(d, state),
+      );
+      if (!safetyNetUsed && unread.length) {
         safetyNetUsed = true;
         forceAnswer = true;
         state.text = "";
@@ -270,6 +276,34 @@ function parseFinding(tag: string): Finding | null {
   if (t.includes("partial")) return "partial";
   if (t.includes("found")) return "found";
   return null;
+}
+
+/**
+ * Read "FINDING: D1=found, D2=not_found" (or a single "FINDING: found").
+ * A document the AI didn't report falls back to whether the answer cites it.
+ */
+function parseFindings(tag: string, docs: ChatDoc[], text: string): Map<string, Finding> {
+  const out = new Map<string, Finding>();
+  for (const m of tag.matchAll(/(D\d+)\s*[=:]\s*(not[_\s-]?found|partial|found)/gi)) {
+    const f = parseFinding(m[2]);
+    if (f && docs.some((d) => d.label === m[1].toUpperCase())) out.set(m[1].toUpperCase(), f);
+  }
+  if (!out.size) {
+    const single = parseFinding(tag);
+    if (single) for (const d of docs) out.set(d.label, single);
+  }
+  const cited = citedIds(text);
+  for (const d of docs) {
+    if (!out.has(d.label)) out.set(d.label, cited.some((id) => id.startsWith(`${d.label}-`)) ? "found" : "not_found");
+  }
+  return out;
+}
+
+function overallFinding(findings: Finding[]): Finding | null {
+  if (!findings.length) return null;
+  if (findings.every((f) => f === "found")) return "found";
+  if (findings.every((f) => f === "not_found")) return "not_found";
+  return "partial";
 }
 
 function fullyRead(doc: ChatDoc, state: AgentState): boolean {

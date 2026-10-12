@@ -24,6 +24,7 @@ export function UploadingRow({ upload }: { upload: PendingUpload }) {
   const kind = upload.name.toLowerCase().endsWith(".pdf") ? "pdf" : "docx";
   return (
     <li className="flex items-center gap-3 px-4 py-3.5">
+      <span className="size-4 shrink-0" />
       <FileIcon kind={kind} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{upload.name}</p>
@@ -41,7 +42,17 @@ export function UploadingRow({ upload }: { upload: PendingUpload }) {
   );
 }
 
-export function DocumentRow({ doc, onDelete }: { doc: DocumentSummary; onDelete: () => void }) {
+export function DocumentRow({
+  doc,
+  selected,
+  onToggle,
+  onDelete,
+}: {
+  doc: DocumentSummary;
+  selected: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const ready = doc.status === "ready";
@@ -57,7 +68,15 @@ export function DocumentRow({ doc, onDelete }: { doc: DocumentSummary; onDelete:
   const title = <p className="truncate text-sm font-medium">{doc.name}</p>;
 
   return (
-    <li className="group flex items-center gap-3 px-4 py-3.5">
+    <li className={`group flex items-center gap-3 px-4 py-3.5 ${selected ? "bg-accent-soft/60" : ""}`}>
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={onToggle}
+        disabled={!ready}
+        aria-label={`Select ${doc.name}`}
+        className="size-4 shrink-0 accent-[var(--accent)] disabled:opacity-30"
+      />
       <FileIcon kind={doc.kind} />
       <div className="min-w-0 flex-1">
         {ready ? (

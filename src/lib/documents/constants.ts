@@ -2,6 +2,9 @@
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
+/** Documents one chat can cover; more makes comparisons unreadable and full scans slow. */
+export const MAX_CHAT_DOCUMENTS = 5;
+
 export const MIME_BY_KIND = {
   pdf: "application/pdf",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

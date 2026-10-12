@@ -67,6 +67,7 @@ export function AssistantMessage({
       }
       const id = href.slice(6);
       const citation = byId.get(id);
+      const letter = multiDoc ? docLetter(id) : null;
       if (citation) {
         return (
           <button
@@ -74,8 +75,9 @@ export function AssistantMessage({
             className={`mx-0.5 inline-flex h-[1.15rem] min-w-[1.15rem] -translate-y-px items-center justify-center rounded px-1 align-middle text-[11px] font-semibold transition-colors ${
               selectedId === id ? "bg-accent text-white" : "bg-accent-soft text-accent hover:bg-accent hover:text-white"
             }`}
-            title={`Verified passage${citation.clause ? ` · clause ${citation.clause}` : ""}`}
+            title={`Verified passage${citation.clause ? ` · clause ${citation.clause}` : ""}${multiDoc ? ` · ${citation.documentName}` : ""}`}
           >
+            {letter && <span className="mr-0.5 opacity-60">{letter}</span>}
             {children}
           </button>
         );
@@ -247,7 +249,8 @@ function Sources({
               }`}
             >
               <div className="flex items-center gap-2 text-xs">
-                <span className="flex size-4.5 shrink-0 items-center justify-center rounded bg-accent-soft text-[10px] font-semibold text-accent">
+                <span className="flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded bg-accent-soft px-1 text-[10px] font-semibold text-accent">
+                  {multiDoc && <span className="mr-0.5 opacity-60">{docLetter(c.id)}</span>}
                   {numberOf(c.id)}
                 </span>
                 <span className="truncate font-medium">{citationTitle(c, multiDoc)}</span>
@@ -270,6 +273,12 @@ function Sources({
 }
 
 const SOURCES_COLLAPSED = 4;
+
+/** "D2-C14" -> "B": a short tag for which document a citation comes from. */
+export function docLetter(id: string): string {
+  const n = Number(/^D(\d+)-/.exec(id)?.[1] ?? 1);
+  return String.fromCharCode(64 + n);
+}
 
 export function citationTitle(c: Citation, multiDoc: boolean): string {
   const parts = [

@@ -10,6 +10,13 @@ import { AssistantMessage, UserMessage } from "./message";
 import { DocumentPanel } from "@/components/viewer/document-panel";
 import { useChatStream } from "./use-chat-stream";
 
+const MULTI_SUGGESTIONS = [
+  "How do the liability caps compare?",
+  "Which agreement has the longer termination notice period?",
+  "Compare the payment terms across these documents.",
+  "What are the key differences between these documents?",
+];
+
 const SUGGESTIONS = [
   "What is the liability cap?",
   "How can this agreement be terminated?",
@@ -95,7 +102,8 @@ export function Workspace() {
         <div className="h-5 w-px bg-line" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium" title={docNames}>
-            {docNames}
+            {multiDoc ? `${data.documents.length} documents` : docNames}
+            {multiDoc && <span className="ml-2 font-normal text-muted">{docNames}</span>}
           </p>
         </div>
         <button
@@ -112,7 +120,7 @@ export function Workspace() {
           <div ref={scroller} className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-6">
               {messages.length === 0 ? (
-                <EmptyChat onPick={ask} />
+                <EmptyChat onPick={ask} documents={data.documents.map((d) => d.name)} />
               ) : (
                 messages.map((m, i) =>
                   m.role === "user" ? (
@@ -143,7 +151,9 @@ export function Workspace() {
               placeholder={multiDoc ? "Ask a question across these documents…" : "Ask a question about this document…"}
             />
             <p className="mt-1.5 text-center text-[11px] text-muted">
-              Answers come only from the document. Every citation is checked against the text.
+              {multiDoc
+                ? "Answers come only from these documents. Every citation is checked against its own document."
+                : "Answers come only from the document. Every citation is checked against the text."}
             </p>
           </div>
         </main>
@@ -166,16 +176,33 @@ async function fetchChat(id: string): Promise<ChatData> {
   return res.json();
 }
 
-function EmptyChat({ onPick }: { onPick: (q: string) => void }) {
+function EmptyChat({ onPick, documents }: { onPick: (q: string) => void; documents: string[] }) {
+  const multi = documents.length > 1;
   return (
     <div className="pt-10 text-center">
       <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-accent-soft">
         <MessageSquare className="size-5 text-accent" />
       </div>
-      <p className="text-sm font-medium">Ask anything about this contract</p>
-      <p className="mt-1 text-xs text-muted">Answers cite the exact passages they come from.</p>
+      <p className="text-sm font-medium">{multi ? `Ask across ${documents.length} documents` : "Ask anything about this contract"}</p>
+      <p className="mt-1 text-xs text-muted">
+        {multi
+          ? "Answers compare the documents, and every citation is checked against its own document."
+          : "Answers cite the exact passages they come from."}
+      </p>
+      {multi && (
+        <ul className="mx-auto mt-4 max-w-sm space-y-1 text-left text-xs">
+          {documents.map((name, i) => (
+            <li key={name + i} className="flex items-center gap-2 truncate">
+              <span className="flex size-4.5 shrink-0 items-center justify-center rounded bg-accent-soft text-[10px] font-semibold text-accent">
+                {String.fromCharCode(65 + i)}
+              </span>
+              <span className="truncate">{name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="mt-6 grid gap-2 sm:grid-cols-2">
-        {SUGGESTIONS.map((s) => (
+        {(multi ? MULTI_SUGGESTIONS : SUGGESTIONS).map((s) => (
           <button
             key={s}
             onClick={() => onPick(s)}
