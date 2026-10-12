@@ -17,9 +17,13 @@
     "@neondatabase/serverless": "^1.2.0",
     "@vercel/blob": "^2.8.1",
     "drizzle-orm": "^0.45.4",
+    "lucide-react": "^1.55.0",
+    "mammoth": "^1.13.0",
     "next": "16.4.0",
+    "node-html-parser": "^9.0.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "unpdf": "^1.8.1",
     "zod": "^4.6.6"
   },
   "devDependencies": {
