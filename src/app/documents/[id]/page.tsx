@@ -1,11 +1,11 @@
 import { Suspense } from "react";
-import { ChunkInspector } from "@/components/inspector/chunk-inspector";
+import { OpenDocument } from "@/components/chat/open-document";
 
-// Temporary: shows how a document was split into chunks. Replaced by the chat workspace in Phase 2.
+// Opening a document goes to its most recent chat, or starts one.
 export default function DocumentPage() {
   return (
     <Suspense>
-      <ChunkInspector />
+      <OpenDocument />
     </Suspense>
   );
 }

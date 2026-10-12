@@ -62,3 +62,55 @@ body {
   background: var(--bg);
   color: var(--fg);
 }
+
+/* Markdown answers */
+.answer > * + * {
+  margin-top: 0.75em;
+}
+.answer ul,
+.answer ol {
+  padding-left: 1.25em;
+}
+.answer ul {
+  list-style: disc;
+}
+.answer ol {
+  list-style: decimal;
+}
+.answer li + li {
+  margin-top: 0.35em;
+}
+.answer strong {
+  font-weight: 600;
+}
+.answer h1,
+.answer h2,
+.answer h3 {
+  font-weight: 600;
+  margin-top: 1em;
+}
+.answer code {
+  font-family: var(--font-geist-mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+}
+.answer table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  display: block;
+  overflow-x: auto;
+}
+.answer th,
+.answer td {
+  border: 1px solid var(--line);
+  padding: 0.4em 0.6em;
+  text-align: left;
+  vertical-align: top;
+}
+.answer th {
+  background: var(--surface-2);
+  font-weight: 600;
+}

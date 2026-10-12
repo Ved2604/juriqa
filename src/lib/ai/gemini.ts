@@ -17,3 +17,11 @@ export function gemini(): GoogleGenAI {
 export function model(): string {
   return env().GEMINI_MODEL;
 }
+
+/** Primary model first, then the optional fallback used when the primary is overloaded. */
+export function models(): string[] {
+  const { GEMINI_MODEL, GEMINI_FALLBACK_MODEL } = env();
+  return GEMINI_FALLBACK_MODEL && GEMINI_FALLBACK_MODEL !== GEMINI_MODEL
+    ? [GEMINI_MODEL, GEMINI_FALLBACK_MODEL]
+    : [GEMINI_MODEL];
+}

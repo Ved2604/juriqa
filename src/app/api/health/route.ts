@@ -1,7 +1,8 @@
 import { connection } from "next/server";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { gemini, model } from "@/lib/ai/gemini";
+import { gemini } from "@/lib/ai/gemini";
+import { withRetry } from "@/lib/ai/retry";
 
 async function check(fn: () => Promise<string>) {
   try {
@@ -20,11 +21,12 @@ export async function GET() {
       return "connected";
     }),
     check(async () => {
-      const res = await gemini().models.generateContent({
-        model: model(),
-        contents: "Reply with the single word: pong",
+      let used = "";
+      const res = await withRetry((m) => {
+        used = m;
+        return gemini().models.generateContent({ model: m, contents: "Reply with the single word: pong" });
       });
-      return `${model()}: ${res.text?.trim()}`;
+      return `${used}: ${res.text?.trim()}`;
     }),
   ]);
 
