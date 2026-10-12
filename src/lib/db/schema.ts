@@ -121,6 +121,28 @@ export type Citation = {
   pageEnd: number | null;
 };
 
+/** What the answer claims: found it, says it isn't there, or only partly answered. */
+export type Finding = "found" | "not_found" | "partial";
+
+/** How much of one document the model actually read while answering. Computed by our code, never by the AI. */
+export type DocCoverage = {
+  documentId: string;
+  label: string;
+  name: string;
+  totalChunks: number;
+  readChunks: number;
+  /** Every chunk was read (full scan succeeded or the searches touched everything). */
+  full: boolean;
+  fullScan: boolean;
+  pagesRead: number[];
+  /** Pages that could not be read: failed scan batches. */
+  failedPages: number[];
+  /** Pages that are scanned images with no text. */
+  scannedPages: number[];
+};
+
+export type Coverage = { finding: Finding | null; documents: DocCoverage[] };
+
 /** One step of the agent's work, shown under the answer ("Searched for ..."). */
 export type TraceStep = {
   tool: string;
@@ -147,6 +169,7 @@ export const messages = pgTable(
     trace: jsonb("trace").$type<TraceStep[]>().notNull().default([]),
     // Chunk IDs whose text was sent to the model while answering (coverage, Phase 3).
     readChunks: jsonb("read_chunks").$type<string[]>().notNull().default([]),
+    coverage: jsonb("coverage").$type<Coverage>(),
     error: text("error"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

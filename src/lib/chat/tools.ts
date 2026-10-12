@@ -76,6 +76,19 @@ export const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "read_entire_document",
+    description:
+      "Read every passage of the document(s) and return the ones relevant to the question, with short notes on each part. Slow (10-30 seconds). Use only for summaries, overviews and 'list all / every' questions.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        question: { type: Type.STRING, description: "What to look for while reading, usually the user's question." },
+        document: docArg,
+      },
+      required: ["question"],
+    },
+  },
+  {
     name: "list_clauses",
     description:
       "The document's outline: section headings with their clause numbers and the ID of each section's first passage. Use it to find where a topic lives.",
@@ -162,7 +175,7 @@ function toRetrieved(rows: ChunkSelect[], docs: ChatDoc[]): RetrievedChunk[] {
   });
 }
 
-function formatChunks(list: RetrievedChunk[], multiDoc: boolean) {
+export function formatChunks(list: RetrievedChunk[], multiDoc: boolean) {
   return list.map((c) => ({
     id: c.label,
     ...(multiDoc ? { document: c.doc.name } : {}),
@@ -250,7 +263,7 @@ async function listClauses(scope: ChatDoc[]): Promise<ToolResult> {
     .where(inArray(chunks.documentId, scope.map((d) => d.id)))
     .orderBy(asc(chunks.documentId), asc(chunks.index));
 
-  const outline: { document?: string; heading: string; firstId: string; clauses?: string }[] = [];
+  const outline: { document?: string; heading: string; startsAt: string; clauses?: string }[] = [];
   let last: (typeof outline)[number] | undefined;
   let clauses: string[] = [];
   const close = () => {
@@ -261,7 +274,7 @@ async function listClauses(scope: ChatDoc[]): Promise<ToolResult> {
     const heading = r.heading ?? "(untitled)";
     if (!last || last.heading !== heading || last.document !== (scope.length > 1 ? doc.name : undefined)) {
       close();
-      last = { ...(scope.length > 1 ? { document: doc.name } : {}), heading, firstId: chunkLabel(doc, r.index) };
+      last = { ...(scope.length > 1 ? { document: doc.name } : {}), heading, startsAt: chunkLabel(doc, r.index) };
       outline.push(last);
       clauses = [];
     }
@@ -269,5 +282,13 @@ async function listClauses(scope: ChatDoc[]): Promise<ToolResult> {
   }
   close();
   // The outline shows headings, not passage text, so it does not count as reading any chunk.
-  return { response: { outline }, chunks: [], label: "Reviewed the table of contents", ok: true };
+  return {
+    response: {
+      outline,
+      note: "Headings only. Read a section with get_section or get_context before citing it; outline IDs cannot be cited.",
+    },
+    chunks: [],
+    label: "Reviewed the table of contents",
+    ok: true,
+  };
 }

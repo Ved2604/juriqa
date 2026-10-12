@@ -1,8 +1,8 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { AiUnavailableError } from "@/lib/ai/retry";
-import { type Citation, type MessageStatus, type RouteType, chats, messages } from "@/lib/db/schema";
-import { type AgentState, type HistoryMessage, runAgent } from "./agent";
+import { type Citation, type Coverage, type MessageStatus, type RouteType, chats, messages } from "@/lib/db/schema";
+import { type AgentState, type HistoryMessage, newAgentState, runAgent } from "./agent";
 import { type ChatDoc, loadChatDocs } from "./context";
 import { type ChatEvent, citedIds } from "./events";
 import { refusalText, routeQuestion } from "./router";
@@ -63,7 +63,7 @@ export function respond(chatId: string, question: string): ReadableStream<Uint8A
         }
       };
 
-      const state: AgentState = { text: "", trace: [], retrieved: new Map() };
+      const state: AgentState = newAgentState();
       let route: RouteType | null = null;
       let status: MessageStatus = "complete";
       let error: string | undefined;
@@ -101,7 +101,8 @@ export function respond(chatId: string, question: string): ReadableStream<Uint8A
           state.text = refusalText(decision, docs);
           send({ type: "text", delta: state.text });
         } else {
-          for await (const event of runAgent({ question, history, docs, signal: abort.signal, state })) {
+          const fullDocument = decision.needs_full_document === true;
+          for await (const event of runAgent({ question, history, docs, signal: abort.signal, state, fullDocument })) {
             send(event);
           }
         }
@@ -120,6 +121,8 @@ export function respond(chatId: string, question: string): ReadableStream<Uint8A
 
       const { citations, invalid } = validateCitations(state.text, state.retrieved, prior);
       send({ type: "citations", citations, invalid });
+      const coverage = route === "document" ? computeCoverage(docs, state) : null;
+      if (coverage) send({ type: "coverage", coverage });
 
       if (assistantId) {
         await db
@@ -131,7 +134,8 @@ export function respond(chatId: string, question: string): ReadableStream<Uint8A
             citations,
             invalidCitations: invalid,
             trace: state.trace,
-            readChunks: [...state.retrieved.keys()],
+            readChunks: [...state.read.keys()],
+            coverage,
             error: error ?? null,
           })
           .where(eq(messages.id, assistantId))
@@ -149,6 +153,33 @@ export function respond(chatId: string, question: string): ReadableStream<Uint8A
 }
 
 class UserFacingError extends Error {}
+
+/** What was actually read, per document. Computed from our own records, never from the AI's claims. */
+export function computeCoverage(docs: ChatDoc[], state: AgentState): Coverage {
+  return {
+    finding: state.finding,
+    documents: docs.map((d) => {
+      const read = [...state.read.values()].filter((c) => c.doc.id === d.id);
+      const pages = new Set<number>();
+      for (const c of read) {
+        if (c.pageStart && c.pageEnd) for (let p = c.pageStart; p <= c.pageEnd; p++) pages.add(p);
+      }
+      const failedPages = [...new Set(state.failedPages.get(d.id) ?? [])].sort((a, b) => a - b);
+      return {
+        documentId: d.id,
+        label: d.label,
+        name: d.name,
+        totalChunks: d.chunkCount,
+        readChunks: read.length,
+        full: read.length >= d.chunkCount,
+        fullScan: state.scanned.has(d.id),
+        pagesRead: [...pages].sort((a, b) => a - b),
+        failedPages,
+        scannedPages: d.unreadablePages,
+      };
+    }),
+  };
+}
 
 /**
  * Earlier turns to give the model, as question/answer pairs. A question whose

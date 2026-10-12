@@ -14,9 +14,10 @@ import {
   ShieldAlert,
   XCircle,
 } from "lucide-react";
-import { CITATION_GROUP, citedIds } from "@/lib/chat/events";
+import { CITATION_GROUP, citedIds, expandGroup } from "@/lib/chat/events";
 import type { SelectedCitation, UiMessage } from "@/lib/chat/client-types";
 import type { Citation } from "@/lib/db/schema";
+import { CoverageBadge } from "./coverage-badge";
 
 export function UserMessage({ message }: { message: UiMessage }) {
   return (
@@ -50,8 +51,7 @@ export function AssistantMessage({
 
   // Turn [D1-C87, D1-C90] into markdown links the renderer swaps for citation chips.
   const markdown = message.content.replace(CITATION_GROUP, (_, group: string) =>
-    group
-      .split(/\s*[,;]\s*/)
+    expandGroup(group)
       .map((id) => `[${numberOf(id)}](#cite-${id})`)
       .join(""),
   );
@@ -98,8 +98,14 @@ export function AssistantMessage({
     },
   };
 
+  // An honest "not in the document" has nothing to cite; any other uncited answer is suspect.
   const noSupport =
-    settled && message.status === "complete" && message.route === "document" && message.content && !message.citations.length;
+    settled &&
+    message.status === "complete" &&
+    message.route === "document" &&
+    message.content &&
+    !message.citations.length &&
+    message.coverage?.finding !== "not_found";
 
   return (
     <div className="space-y-3">
@@ -160,6 +166,8 @@ export function AssistantMessage({
           This answer cites no passages from the document.
         </p>
       )}
+
+      {settled && message.coverage && message.content && <CoverageBadge coverage={message.coverage} />}
 
       {message.citations.length > 0 && (
         <Sources

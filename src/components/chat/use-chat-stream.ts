@@ -14,6 +14,7 @@ const blankAssistant = (id: string): UiMessage => ({
   invalidCitations: [],
   trace: [],
   error: null,
+  coverage: null,
   liveStatus: "Sending",
 });
 
@@ -110,6 +111,9 @@ export function useChatStream(chatId: string, setMessages: (fn: (m: UiMessage[])
             break;
           case "citations":
             patch((m) => ({ ...m, citations: event.citations, invalidCitations: event.invalid }));
+            break;
+          case "coverage":
+            patch((m) => ({ ...m, coverage: event.coverage }));
             break;
           case "done":
             patch((m) => ({ ...m, status: event.status, error: event.error ?? null, liveStatus: undefined }));

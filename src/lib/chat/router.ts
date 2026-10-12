@@ -10,6 +10,8 @@ export type RouteDecision = {
   suggestion?: string;
   /** For chitchat: a one-line reply. */
   reply?: string;
+  /** Summaries, overviews and "list all / every" questions: read everything before answering. */
+  needs_full_document?: boolean;
 };
 
 const SYSTEM = `You classify a user's message in a contract-analysis app. The app answers ONLY from the user's uploaded documents.
@@ -23,7 +25,8 @@ Categories:
 Rules:
 - If unsure, choose "document". Wrongly refusing a real question is worse than answering an unrelated one.
 - For "general_knowledge", set "suggestion" to a question about THESE documents the user could ask instead, e.g. "What does the indemnity clause in this agreement cover?".
-- For "chitchat", set "reply" to one short friendly sentence that invites a question about the documents.`;
+- For "chitchat", set "reply" to one short friendly sentence that invites a question about the documents.
+- For "document", set "needs_full_document" to true when answering requires reading the whole document rather than finding specific passages: summaries, overviews, "what does this contract cover", "list all / every ...", "what are all the obligations / risks / deadlines". Otherwise false.`;
 
 /** Classify the question. Fails open: any error means "document". */
 export async function routeQuestion(
@@ -57,6 +60,7 @@ Message to classify: ${question}`;
                 type: { type: Type.STRING, enum: ["document", "general_knowledge", "off_topic", "chitchat"] },
                 suggestion: { type: Type.STRING },
                 reply: { type: Type.STRING },
+                needs_full_document: { type: Type.BOOLEAN },
               },
               required: ["type"],
             },

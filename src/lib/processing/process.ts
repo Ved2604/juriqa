@@ -6,6 +6,7 @@ import { extractDocx } from "./docx";
 import { extractPdf } from "./pdf";
 import { sniffKind } from "./sniff";
 import { ProcessingError } from "./types";
+import { formatPages } from "@/lib/pages";
 
 /** A document still "processing" after this long was interrupted (e.g. the server restarted). */
 const STALE_AFTER_MS = 6 * 60 * 1000;
@@ -118,15 +119,4 @@ export async function expireStaleDocuments(): Promise<void> {
         lt(documents.updatedAt, new Date(Date.now() - STALE_AFTER_MS)),
       ),
     );
-}
-
-export function formatPages(pages: number[]): string {
-  const ranges: string[] = [];
-  for (let i = 0; i < pages.length; i++) {
-    let j = i;
-    while (j + 1 < pages.length && pages[j + 1] === pages[j] + 1) j++;
-    ranges.push(i === j ? `${pages[i]}` : `${pages[i]}–${pages[j]}`);
-    i = j;
-  }
-  return `${pages.length === 1 ? "Page" : "Pages"} ${ranges.join(", ")}`;
 }
