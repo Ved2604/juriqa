@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, FileText, Loader2, MessageSquare, Plus } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, History, Loader2, MessageSquare, Plus } from "lucide-react";
 import type { ChatData, ChatSummary, SelectedCitation, UiMessage } from "@/lib/chat/client-types";
 import { Composer } from "./composer";
 import { AssistantMessage, UserMessage } from "./message";
 import { DocumentPanel } from "@/components/viewer/document-panel";
 import { useChatStream } from "./use-chat-stream";
+import { useTitle } from "@/lib/use-title";
 
 const MULTI_SUGGESTIONS = [
   "How do the liability caps compare?",
@@ -38,6 +39,7 @@ export function Workspace() {
   }, []);
   const scroller = useRef<HTMLDivElement>(null);
   const { send, stop, streaming } = useChatStream(id, setMessages);
+  useTitle(data ? (data.chat.title !== "New chat" ? data.chat.title : data.documents.map((d) => d.name).join(", ")) : null);
 
   const load = useCallback(async () => {
     const body = await fetchChat(id);
@@ -110,7 +112,8 @@ export function Workspace() {
           onClick={() => setPanelOpen(true)}
           className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-muted hover:bg-surface-2 hover:text-fg lg:hidden"
         >
-          <FileText className="size-4" /> Document
+          <FileText className="size-4" />
+          <span className="hidden sm:inline">Document</span>
         </button>
         <ChatMenu chatId={id} documentId={data.documents[0]?.id} documentIds={data.documents.map((d) => d.id)} />
       </header>
@@ -242,19 +245,24 @@ function ChatMenu({ chatId, documentId, documentIds }: { chatId: string; documen
   }
 
   return (
-    <div className="relative flex items-center gap-2">
+    <div className="relative flex shrink-0 items-center gap-1 sm:gap-2">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-muted hover:bg-surface-2 hover:text-fg"
+        className="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1.5 text-sm text-muted hover:bg-surface-2 hover:text-fg"
+        aria-label="Chat history"
       >
-        History <ChevronDown className="size-3.5" />
+        <History className="size-4 sm:hidden" />
+        <span className="hidden sm:inline">History</span>
+        <ChevronDown className="size-3.5" />
       </button>
       <button
         onClick={newChat}
         disabled={creating}
-        className="inline-flex items-center gap-1 rounded-md border border-line px-2.5 py-1.5 text-sm hover:bg-surface-2 disabled:opacity-50"
+        className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-line px-2.5 py-1.5 text-sm hover:bg-surface-2 disabled:opacity-50"
+        aria-label="New chat"
       >
-        <Plus className="size-3.5" /> New chat
+        <Plus className="size-3.5" />
+        <span className="hidden sm:inline">New chat</span>
       </button>
       {open && (
         <>

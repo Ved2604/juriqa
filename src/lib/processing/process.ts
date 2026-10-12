@@ -76,8 +76,11 @@ export async function processDocument(id: string): Promise<void> {
       wordCount: c.wordCount,
       boxes: c.boxes,
     }));
-    for (let i = 0; i < rows.length; i += 100) {
-      await db.insert(chunks).values(rows.slice(i, i + 100));
+    // Insert in batches, a few at a time: one big insert can exceed request limits, one-by-one is slow.
+    const batches: (typeof rows)[] = [];
+    for (let i = 0; i < rows.length; i += 100) batches.push(rows.slice(i, i + 100));
+    for (let i = 0; i < batches.length; i += 4) {
+      await Promise.all(batches.slice(i, i + 4).map((b) => db.insert(chunks).values(b)));
     }
 
     await update(id, {

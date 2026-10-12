@@ -63,7 +63,7 @@ export function respond(chatId: string, question: string): ReadableStream<Uint8A
         }
       };
 
-      const state: AgentState = newAgentState();
+      let state: AgentState = newAgentState();
       let route: RouteType | null = null;
       let status: MessageStatus = "complete";
       let error: string | undefined;
@@ -93,18 +93,32 @@ export function respond(chatId: string, question: string): ReadableStream<Uint8A
         send({ type: "start", userMessageId: user.id, assistantMessageId: assistant.id });
 
         send({ type: "status", text: "Understanding the question" });
+
+        // Most questions are about the document, so research starts while the router decides.
+        // Its events are held back until the router agrees; otherwise the work is discarded.
+        const speculative = new AbortController();
+        abort.signal.addEventListener("abort", () => speculative.abort());
+        const research = buffered(runAgent({ question, history, docs, signal: speculative.signal, state }));
+
         const decision = await routeQuestion(question, history, docs, abort.signal);
         route = decision.type;
         send({ type: "route", route });
 
+        if (decision.type !== "document" || decision.needs_full_document) {
+          speculative.abort();
+          await research.finished;
+          state = newAgentState();
+        }
+
         if (decision.type !== "document") {
           state.text = refusalText(decision, docs);
           send({ type: "text", delta: state.text });
-        } else {
-          const fullDocument = decision.needs_full_document === true;
-          for await (const event of runAgent({ question, history, docs, signal: abort.signal, state, fullDocument })) {
+        } else if (decision.needs_full_document) {
+          for await (const event of runAgent({ question, history, docs, signal: abort.signal, state, fullDocument: true })) {
             send(event);
           }
+        } else {
+          for await (const event of research.drain()) send(event);
         }
       } catch (e) {
         if (abort.signal.aborted) {
@@ -153,6 +167,49 @@ export function respond(chatId: string, question: string): ReadableStream<Uint8A
 }
 
 class UserFacingError extends Error {}
+
+/**
+ * Run an async generator in the background, collecting its values, so they can
+ * be replayed later with drain(). Errors are rethrown from drain().
+ */
+function buffered<T>(gen: AsyncGenerator<T>) {
+  const items: T[] = [];
+  let done = false;
+  let failure: { error: unknown } | null = null;
+  // Held in an object so TypeScript sees assignments made inside closures.
+  const waiter: { wake: (() => void) | null } = { wake: null };
+
+  const finished = (async () => {
+    try {
+      for await (const item of gen) {
+        items.push(item);
+        waiter.wake?.();
+      }
+    } catch (error) {
+      failure = { error };
+    } finally {
+      done = true;
+      waiter.wake?.();
+    }
+  })();
+
+  async function* drain(): AsyncGenerator<T> {
+    for (;;) {
+      if (items.length) {
+        yield items.shift()!;
+        continue;
+      }
+      if (done) {
+        if (failure) throw failure.error;
+        return;
+      }
+      await new Promise<void>((resolve) => (waiter.wake = resolve));
+      waiter.wake = null;
+    }
+  }
+
+  return { finished, drain };
+}
 
 /** What was actually read, per document. Computed from our own records, never from the AI's claims. */
 export function computeCoverage(docs: ChatDoc[], state: AgentState): Coverage {

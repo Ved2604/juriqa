@@ -15,6 +15,7 @@ import {
 import type { DocumentSummary } from "@/lib/documents/types";
 import { DocumentRow, UploadingRow } from "./document-row";
 import { Dropzone } from "./dropzone";
+import { RecentActivity } from "./recent-activity";
 
 export type PendingUpload = { key: string; name: string; size: number; progress: number };
 
@@ -150,9 +151,14 @@ export function Library() {
     }
   }
 
+  const [recentKey, setRecentKey] = useState(0);
+
   async function handleDelete(id: string) {
     const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
-    if (res.ok || res.status === 404) setDocs((d) => d?.filter((x) => x.id !== id) ?? null);
+    if (res.ok || res.status === 404) {
+      setDocs((d) => d?.filter((x) => x.id !== id) ?? null);
+      setRecentKey((k) => k + 1);
+    }
   }
 
   const isEmpty = docs !== null && docs.length === 0 && pending.length === 0;
@@ -191,8 +197,8 @@ export function Library() {
       )}
 
       <section className="mt-10">
-        <div className="mb-3 flex items-baseline justify-between">
-          <div>
+        <div className="mb-3 flex items-baseline justify-between gap-4">
+          <div className="min-w-0">
             <h2 className="text-sm font-medium">Documents</h2>
             {docs && docs.some((d) => d.status === "ready") && (
               <p className="mt-0.5 text-xs text-muted">
@@ -202,7 +208,7 @@ export function Library() {
             )}
           </div>
           {docs && docs.length > 0 && (
-            <span className="text-xs text-muted">
+            <span className="shrink-0 text-xs text-muted">
               {docs.length} {docs.length === 1 ? "document" : "documents"}
             </span>
           )}
@@ -238,6 +244,8 @@ export function Library() {
           </ul>
         )}
       </section>
+
+      <RecentActivity refreshKey={recentKey} />
 
       {chosen.length > 0 && (
         <div className="sticky bottom-4 mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-lg">

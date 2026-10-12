@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import { ArrowLeft, ArrowLeftRight, ArrowRight, Loader2, RotateCcw, XCircle } from "lucide-react";
 import type { ClauseChange, ComparisonResult, DocumentStatus, Significance } from "@/lib/db/schema";
 import { ChangeCard, SIGNIFICANCE_LABEL, SIGNIFICANCE_STYLE } from "./change-card";
+import { useTitle } from "@/lib/use-title";
 
 type DocInfo = { id: string; name: string; kind: string; pageCount: number | null } | null;
 type ComparisonData = {
@@ -31,6 +32,7 @@ export function ComparisonView() {
   const [filter, setFilter] = useState<Significance | "all">("all");
   const [sort, setSort] = useState<"significance" | "document">("significance");
   const [busy, setBusy] = useState(false);
+  useTitle(data?.oldDocument && data.newDocument ? `${data.oldDocument.name} → ${data.newDocument.name}` : "Compare versions");
 
   useEffect(() => {
     let cancelled = false;
