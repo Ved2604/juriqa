@@ -2,7 +2,7 @@
 
 A web app for analysing legal contracts. Upload a contract (PDF or DOCX), ask questions about it, and get answers that cite the exact passages they come from. Click a citation and the original document opens beside the chat, scrolled to the passage, with it highlighted.
 
-**Live app:** _add the Vercel URL here_ · **Demo video:** _add the link here_ · **Design notes:** [DESIGN.md](DESIGN.md) · **Submission note:** [NOTE.md](NOTE.md)
+**Live app:** https://juriqa.vercel.app · **Demo video:** _add the link here_ · **Design notes:** [DESIGN.md](DESIGN.md) · **Submission note:** [NOTE.md](NOTE.md)
 
 ## What it does
 
