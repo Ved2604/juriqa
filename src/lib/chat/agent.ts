@@ -148,6 +148,15 @@ ${prescanNote(JSON.stringify(scanResponse(scan, docs)))}` }],
 
     if (out.text.trim()) {
       state.findings = parseFindings(out.tag, docs, state.text);
+      // The AI's own tag is not trusted on this point: an answer whose wording claims something
+      // is absent counts as "not found" for every document not yet read in full.
+      if (claimsAbsence(state.text)) {
+        for (const d of docs) {
+          if (!state.scanned.has(d.id) && !fullyRead(d, state) && state.findings.get(d.label) === "found") {
+            state.findings.set(d.label, "partial");
+          }
+        }
+      }
       state.finding = overallFinding([...state.findings.values()]);
 
       // Safety net: never let "not found" stand for a document unless every passage of it was read.
@@ -304,6 +313,24 @@ function overallFinding(findings: Finding[]): Finding | null {
   if (findings.every((f) => f === "found")) return "found";
   if (findings.every((f) => f === "not_found")) return "not_found";
   return "partial";
+}
+
+/**
+ * Does the answer claim that something is absent from the document? Deliberately broad:
+ * a false alarm costs one extra full read; a miss would let an unverified "it isn't there" through.
+ */
+export function claimsAbsence(text: string): boolean {
+  const t = text.replace(/[*_#>`]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+  if (/^(no|none|neither|nope)\b/.test(t)) return true;
+  return [
+    /\b(there (is|are) no|there isn'?t any|contains? no|includes? no|has no|have no|provides? no|makes? no|without any)\b/,
+    /\b(does|do|did) not (contain|include|provide|have|mention|address|specify|set out|grant|give|impose|refer|state|define|cover|permit|allow|require)\b/,
+    /\b(doesn'?t|don'?t) (contain|include|provide|have|mention|address|specify|set out|grant|give|impose|refer|state|define|cover)\b/,
+    /\bnot (mentioned|addressed|specified|included|stated|found|defined|covered|provided for|set out)\b/,
+    /\b(no|nothing) (such |specific |express |explicit )?(clause|provision|term|reference|mention|right|obligation|restriction|requirement)\b/,
+    /\b(absent|is silent|silent on)\b/,
+    /\bneither\b.*\b(contains?|includes?|provides?|has|have)\b/,
+  ].some((r) => r.test(t));
 }
 
 function fullyRead(doc: ChatDoc, state: AgentState): boolean {
