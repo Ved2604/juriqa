@@ -14,13 +14,19 @@ export function clauseNumber(text: string): string | null {
   return m ? m[1].replace(/[.:]$/, "") : null;
 }
 
-/** Short lines in capitals ("LIMITATION OF LIABILITY", "12. TERMINATION"). */
+/**
+ * Short lines in capitals ("LIMITATION OF LIABILITY", "12. TERMINATION").
+ * Mostly letters and no trailing sentence punctuation, so a wrapped line such
+ * as "AED 2,000,000." is not mistaken for a heading.
+ */
 export function isHeadingText(text: string): boolean {
   const t = text.trim();
   const words = t.split(/\s+/);
   if (words.length > 12 || t.length > 100) return false;
+  if (/[.,;]$/.test(t) && !/^\d+(\.\d+)*\.$/.test(words[0] ?? "")) return false;
   const letters = t.replace(/[^A-Za-z]/g, "");
-  if (letters.length < 3) return false;
+  if (letters.length < 4) return false;
+  if (letters.length / t.replace(/\s/g, "").length < 0.6) return false;
   return letters === letters.toUpperCase();
 }
 

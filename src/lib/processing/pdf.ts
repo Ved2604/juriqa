@@ -169,7 +169,10 @@ function buildBlocks(pages: Line[][]): Block[] {
   };
 
   for (const line of pages.flat()) {
-    const heading = isHeadingText(line.text);
+    // A line that continues an unfinished sentence on the same page is never a heading.
+    const continues: boolean = !!current && !!prev && !current.heading && line.page === prev.page &&
+      !ENDS_SENTENCE.test(prev.text) && prev.baseline - line.baseline <= spacing * 1.45;
+    const heading: boolean = !continues && isHeadingText(line.text);
     let newBlock = true;
 
     if (current && prev && !current.heading && !heading) {
