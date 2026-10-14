@@ -103,7 +103,7 @@ export function DocumentRow({
 
       {confirming ? (
         <div className="flex items-center gap-1.5 text-xs">
-          <span className="text-muted">Delete?</span>
+          <span className="text-muted">Delete it and its chats?</span>
           <button
             disabled={deleting}
             onClick={async () => {

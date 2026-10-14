@@ -42,7 +42,9 @@ async function recentChats() {
     .innerJoin(documents, eq(documents.id, chatDocuments.documentId))
     .where(inArray(chatDocuments.chatId, rows.map((r) => r.id)))
     .orderBy(asc(chatDocuments.position));
-  return rows.map((r) => ({ ...r, documents: docs.filter((d) => d.chatId === r.id).map((d) => d.name) }));
+  return rows
+    .map((r) => ({ ...r, documents: docs.filter((d) => d.chatId === r.id).map((d) => d.name) }))
+    .filter((r) => r.documents.length > 0);
 }
 
 const createSchema = z.object({ documentIds: z.array(z.string().uuid()).min(1).max(MAX_CHAT_DOCUMENTS) });

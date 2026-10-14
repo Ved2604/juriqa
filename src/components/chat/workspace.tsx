@@ -91,6 +91,18 @@ export function Workspace() {
     );
   }
 
+  if (data.documents.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-sm">
+        <p className="font-medium">The documents in this chat were deleted.</p>
+        <p className="text-muted">Upload the document again and start a new chat to ask questions about it.</p>
+        <Link href="/" className="mt-1 text-accent hover:underline">
+          Back to documents
+        </Link>
+      </div>
+    );
+  }
+
   const multiDoc = data.documents.length > 1;
   const docNames = data.documents.map((d) => d.name).join(", ");
 
