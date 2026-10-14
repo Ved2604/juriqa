@@ -1,0 +1,3 @@
+Meeting notes - not a contract.
+This plain text file exists to demonstrate that Juriqa only accepts PDF and Word (.docx) files.
+Uploading it should be rejected immediately with a clear message.

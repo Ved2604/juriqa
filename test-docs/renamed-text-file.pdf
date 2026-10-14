@@ -1,0 +1,2 @@
+This file is plain text renamed to .pdf.
+Juriqa checks the file content, not just the extension, so it should be rejected after upload.

@@ -83,7 +83,10 @@ npm run dev            # http://localhost:3000
 - `msa-v1.pdf` / `.docx`: a 16-page services agreement
 - `msa-v3-revised.pdf`: v1 with six known changes, for testing comparison
 - `outsourcing-agreement-long.pdf`: 150 pages, with facts planted on pages 83, 107 and 136
+- `demo-services-agreement-v1.pdf` / `.docx` and `-v2.pdf`: a realistic software services agreement (fictional parties) and a revision with ten known changes
 - `scanned.pdf`: image only, to test rejection
+- `meeting-notes.txt`: wrong file type, rejected immediately
+- `renamed-text-file.pdf`: plain text renamed to `.pdf`, rejected because the content is checked, not the name
 
 ## What is finished and what is not
 
